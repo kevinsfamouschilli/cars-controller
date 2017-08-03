@@ -9,6 +9,7 @@
 
 from PyQt4 import QtCore, QtGui
 import time
+import random
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -24,6 +25,36 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
+class Ui_CV(QtGui.QWidget):
+    
+    def __init__(self):
+        super(Ui_CV, self).__init__()        
+        self.initUI()
+        
+    def initUI(self):      
+        self.setGeometry(300, 300, 1200, 900)
+        self.setWindowTitle('Computer Vision Display')
+        self.show()
+
+    def paintEvent(self, e):  
+        qp = QtGui.QPainter()
+        qp.begin(self)
+        self.drawPoints(qp)
+        qp.end()
+        
+    def drawPoints(self, qp):
+        qp.setPen(QtCore.Qt.red)
+        QPen linepen(Qt::red);
+        
+        pen = QPen(self.FILL_COLOR2, 2 * halfthick, Qt.SolidLine, Qt.RoundCap)
+        painter.setPen(pen)
+        
+        linepen.setCapStyle(Qt::RoundCap);
+        #size = self.size()
+        linepen.setWidth(30);
+        painter.setPen(linepen);
+        qp.drawPoint(5, 5)
+            
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow, length):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
@@ -34,10 +65,10 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
         MainWindow.setSizePolicy(sizePolicy)
         MainWindow.setFocusPolicy(QtCore.Qt.StrongFocus)
+        
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
 
-        
         self.connectPB = QtGui.QPushButton(self.centralwidget)
         self.connectPB.setGeometry(QtCore.QRect(15, 15, 75, 25))
         self.connectPB.setObjectName(_fromUtf8("connectPB"))
@@ -86,8 +117,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         self.MainWindow=MainWindow
-
-        
+            
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "Zen Wheels", None))
         self.connectPB.setText(_translate("MainWindow", "Connect", None))

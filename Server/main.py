@@ -12,7 +12,7 @@ import binascii
 import json
 from PyQt4.QtGui import QApplication, QMainWindow
 from PyQt4 import QtCore,QtGui
-from ui import Ui_MainWindow
+from ui import Ui_MainWindow, Ui_CV
 from time import *
 
 class ServerThread(QtCore.QThread):
@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
         self.ui.CarSwitch.clicked.connect(self.carSwitch)
         self.ui.CarAll.clicked.connect(self.AllCars)
         self.ui.CarTest.clicked.connect(self.TestAll)
-
+        
         # Start the threaded socket server
         self.start_server()
     
@@ -174,12 +174,6 @@ class MainWindow(QMainWindow):
         
     def readJSON(self,data):
         cv_json = json.loads(data.decode('utf-8'))
-        #print ('received: ' + cv_json + '\n')
-        
-        # Just reading json from static file for now...
-        #with open('output.json') as json_data:
-            #cv_json = json.load(json_data)
-            #print(cv_json)
 
         # For loop on each k-v pair in the json
         for key, value in cv_json.items():
@@ -189,7 +183,6 @@ class MainWindow(QMainWindow):
 
             # If the object is a car
             if vis_obj.Object_Type == 1:
-
                 # If car exists in dictionary
                 if vis_obj.MAC_Address in self.cars:                        
                     # update the corresponding car based on MAC
@@ -203,13 +196,12 @@ class MainWindow(QMainWindow):
 class vision_object:
     def __init__(self, key, values):
         self.MAC_Address = key
-        self.Object_Type = values[0]
-        self.Orientation = values[1]
-        self.X_Pos = values[2]
-        self.Y_Pos = values[3]        
-        self.X_Vel = values[4]
-        self.Y_Vel = values[5]
-        
+        self.Object_Type = values[0]        
+        self.X_Pos = values[1]
+        self.Y_Pos = values[2]        
+        self.X_Vel = values[3]
+        self.Y_Vel = values[4]
+        self.Orientation = values[5]
         # Two spare fields which are currently unused:
         # self.spare1 = values[6]
         # self.spare2 = values[7]
@@ -304,6 +296,8 @@ def main():
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
+    
+    cvwindow = Ui_CV()
     
     sys.exit(app.exec_())  
 
