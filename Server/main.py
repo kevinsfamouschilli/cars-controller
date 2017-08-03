@@ -32,7 +32,6 @@ class ServerThread(QtCore.QThread):
 class service(socketserver.BaseRequestHandler):    
     def handle(self):
         
-
         while 1:
             with Timer() as t:
                 self.data = self.request.recv(1024)
@@ -188,15 +187,19 @@ class MainWindow(QMainWindow):
         server.start()
         
     def readJSON(self,data):
-        with Timer() as t:            
-            cv_json = json.loads(data.decode('utf-8'))
+        with Timer() as t:
+            datastr = data.decode('utf-8')
+            print("old: " + datastr)
+            datastr = "{" + find_between_r(datastr,"{","}") + "}"
+            print("new: " + datastr)
+            cv_json = json.loads(datastr)
         print ("=> json.loads and decoding: %s s" % t.secs)
 
         with Timer() as t:  
             # For loop on each k-v pair in the json
             for key, value in cv_json.items():
                 # Initialise a vision object
-                print(value)
+                #print(value)
                 vis_obj = vision_object(key, value)
 
                 # If the object is a car
@@ -213,6 +216,14 @@ class MainWindow(QMainWindow):
                         
         print ("=> for loop on json kv pairs: %s s" % t.secs)
 
+def find_between_r( s, first, last ):
+    try:
+        start = s.rindex( first ) + len( first )
+        end = s.rindex( last, start )
+        return s[start:end]
+    except ValueError:
+        return ""
+    
 class vision_object:
     def __init__(self, key, values):
         self.MAC_Address = key
