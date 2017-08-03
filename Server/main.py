@@ -15,6 +15,9 @@ from PyQt4 import QtCore,QtGui
 from ui import Ui_MainWindow, Ui_CV
 from time import *
 
+
+from timer import Timer
+
 class ServerThread(QtCore.QThread):
     json_received = QtCore.pyqtSignal(object)
 
@@ -28,22 +31,34 @@ class ServerThread(QtCore.QThread):
         
 class service(socketserver.BaseRequestHandler):    
     def handle(self):
+        
+
         while 1:
-            self.data = self.request.recv(1024)
-            if not self.data:
-                break
-            print('Handling request')
-            self.data = self.data.strip()
-            self.server.signal.emit(self.data)
-        print('Closing socket...')
-        self.request.close()
+            with Timer() as t:
+                self.data = self.request.recv(1024)
+                if not self.data:
+                    break
+                print('Handling request')
+            print ("=> Receiving request elapsed: %s s" % t.secs)
+
+            with Timer() as t:
+                self.data = self.data.strip()
+            print ("=> Strip data elapsed: %s s" % t.secs)
+
+            with Timer() as t:
+                self.server.signal.emit(self.data)
+            print ("=> Emit signal elapsed: %s s" % t.secs)
+
+        with Timer() as t:  
+            print('Closing socket...')
+            self.request.close()
+        print ("=> close socket elapsed: %s s" % t.secs)
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
 class MainWindow(QMainWindow):
     def __init__(self):
-      
         QMainWindow.__init__(self)
 
         # Dictionary for storing cars indexed by MAC address
@@ -173,25 +188,30 @@ class MainWindow(QMainWindow):
         server.start()
         
     def readJSON(self,data):
-        cv_json = json.loads(data.decode('utf-8'))
+        with Timer() as t:            
+            cv_json = json.loads(data.decode('utf-8'))
+        print ("=> json.loads and decoding: %s s" % t.secs)
 
-        # For loop on each k-v pair in the json
-        for key, value in cv_json.items():
-            # Initialise a vision object
-            print(value)
-            vis_obj = vision_object(key, value)
+        with Timer() as t:  
+            # For loop on each k-v pair in the json
+            for key, value in cv_json.items():
+                # Initialise a vision object
+                print(value)
+                vis_obj = vision_object(key, value)
 
-            # If the object is a car
-            if vis_obj.Object_Type == 1:
-                # If car exists in dictionary
-                if vis_obj.MAC_Address in self.cars:                        
-                    # update the corresponding car based on MAC
-                    self.cars[vis_obj.MAC_Address].updateStateFromVisionObject(vis_obj)
+                # If the object is a car
+                if vis_obj.Object_Type == 1:
+                    # If car exists in dictionary
+                    if vis_obj.MAC_Address in self.cars:                        
+                        # update the corresponding car based on MAC
+                        self.cars[vis_obj.MAC_Address].updateStateFromVisionObject(vis_obj)
 
-                    # Cars to make decisions based on updated vision        
-                    self.cars[vis_obj.MAC_Address].decideAction()
-                else :
-                    print("Car " + vis_obj.MAC_Address + " not in dictionary of cars.")
+                        # Cars to make decisions based on updated vision        
+                        self.cars[vis_obj.MAC_Address].decideAction()
+                    else :
+                        print("Car " + vis_obj.MAC_Address + " not in dictionary of cars.")
+                        
+        print ("=> for loop on json kv pairs: %s s" % t.secs)
 
 class vision_object:
     def __init__(self, key, values):
@@ -297,7 +317,7 @@ def main():
     window = MainWindow()
     window.show()
     
-    cvwindow = Ui_CV()
+    #cvwindow = Ui_CV()
     
     sys.exit(app.exec_())  
 

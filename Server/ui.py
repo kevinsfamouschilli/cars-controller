@@ -43,16 +43,6 @@ class Ui_CV(QtGui.QWidget):
         qp.end()
         
     def drawPoints(self, qp):
-        qp.setPen(QtCore.Qt.red)
-        QPen linepen(Qt::red);
-        
-        pen = QPen(self.FILL_COLOR2, 2 * halfthick, Qt.SolidLine, Qt.RoundCap)
-        painter.setPen(pen)
-        
-        linepen.setCapStyle(Qt::RoundCap);
-        #size = self.size()
-        linepen.setWidth(30);
-        painter.setPen(linepen);
         qp.drawPoint(5, 5)
             
 class Ui_MainWindow(object):
