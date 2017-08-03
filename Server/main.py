@@ -294,7 +294,10 @@ class car:
         # whilst in bounds, drive at constant speed
         if self.X_Pos > x_min and self.X_Pos < x_max and self.Y_Pos > y_min and self.Y_Pos < y_max:
             print("Car in bounds... driving")
-            self.run()
+            with Timer() as t:
+                self.acceleration=20
+                self.sock.send(binascii.a2b_hex(self.dict['SPEED_FRONT'][self.acceleration]))
+            print ("=> sending drive command elapsed: %s s" % t.secs)
         else:
             # if out of bounds, then stop
             print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
