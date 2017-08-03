@@ -12,7 +12,7 @@ import binascii
 import json
 from PyQt4.QtGui import QApplication, QMainWindow
 from PyQt4 import QtCore,QtGui
-from ui_car_0a import Ui_MainWindow
+from ui import Ui_MainWindow
 from time import *
 
 class ServerThread(QtCore.QThread):
