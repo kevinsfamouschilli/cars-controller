@@ -1,7 +1,3 @@
-#0a - Read/write json from file
-#0b - Attempt multithreading with sockets
-#0c - Attempt keeping socket open in handler
-
 #! /usr/bin/python
 import sys
 import _thread
@@ -14,7 +10,6 @@ from PyQt4.QtGui import QApplication, QMainWindow
 from PyQt4 import QtCore,QtGui
 from ui import Ui_MainWindow, Ui_CV
 from time import *
-
 
 from timer import Timer
 
@@ -195,13 +190,18 @@ class MainWindow(QMainWindow):
             cv_json = json.loads(datastr)
         print ("=> json.loads and decoding: %s s" % t.secs)
 
-        with Timer() as t:  
+        with Timer() as t:
+
+            vision_objects = []
+            
             # For loop on each k-v pair in the json
             for key, value in cv_json.items():
                 # Initialise a vision object
                 #print(value)
                 vis_obj = vision_object(key, value)
+                vision_objects.append(vis_obj)
 
+            for vis_obj in vision_objects:
                 # If the object is a car
                 if vis_obj.Object_Type == 1:
                     # If car exists in dictionary
@@ -209,6 +209,9 @@ class MainWindow(QMainWindow):
                         # update the corresponding car based on MAC
                         self.cars[vis_obj.MAC_Address].updateStateFromVisionObject(vis_obj)
 
+                        # update corresponding car precepts
+                        self.cars[vis_obj.MAC_Address].updatePrecepts(vision_objects)
+                        
                         # Cars to make decisions based on updated vision        
                         self.cars[vis_obj.MAC_Address].decideAction()
                     else :
@@ -251,10 +254,14 @@ class car:
         self.Y_Pos = 0      
         self.X_Vel = 0
         self.Y_Vel = 0
+
+        # Precepts of the car - for the moment this is everything
+        self.Vision_Objects = []
         
         self.action_dict = {'horn' : 0, 'lights' : 0, 'fault' : 0,}
         self.acceleration = 0
-        self.steering = 0
+        self.steering = 0        
+        
         # List of available commands
         self.dict = {}
         self.dict['HORN_OFF'] = '8600'
@@ -276,6 +283,10 @@ class car:
         self.sock.connect((host, port))
         
         length = len(listcars)
+
+    def updatePrecepts(self,visionObjects):
+        self.Vision_Objects = visionObjects
+        
         
     def updateStateFromVisionObject(self,stateVariables):
         self.Orientation = stateVariables.Orientation
@@ -291,19 +302,82 @@ class car:
         y_max = 900 - border;
         y_min = 0 + border;
         
-        # whilst in bounds, drive at constant speed
-        if self.X_Pos > x_min and self.X_Pos < x_max and self.Y_Pos > y_min and self.Y_Pos < y_max:
-            print("Car in bounds... driving")
+        if (carIsWithinBounds() && carIsInFreeSpace()):
+            print("Car in bounds and free space... driving")
             with Timer() as t:
                 self.acceleration=20
                 self.sock.send(binascii.a2b_hex(self.dict['SPEED_FRONT'][self.acceleration]))
             print ("=> sending drive command elapsed: %s s" % t.secs)
+
+            # set steering to maintain left to right path
+            orientationControl(180)
         else:
             # if out of bounds, then stop
             print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
-            print("Car out of bounds... stopping.")
+            print("Car out of bounds or going to collide... stopping.")
             self.stop()
+        
+        # TODO: stop if we are going to hit another car
 
+    # Check car is not going to hit a vision object
+    def carIsInFreeSpace(self):
+        for vis_obj in vision_objects:
+            if vis_obj.MAC_Address != self.MAC_Address:
+                if(distance(self.X_Pos, self.Y_Pos,vis_obj.X_Pos, vis_obj.Y_Pos) < 50):
+                    print("Car too close to other object in sight")
+                    return False
+                
+        # Got this far without finding anything in our zone, so must be in free space
+        return True
+
+    def distance(x1,y1,x2,y2):
+        return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+    
+    # Check car is within bounds
+    def carIsWithinBounds(self):        
+        border = 100;
+        x_max = 1200 - border;
+        x_min = 0 + border;
+        y_max = 900 - border;
+        y_min = 0 + border;
+        
+        # whilst in bounds, drive at constant speed
+        if self.X_Pos > x_min and self.X_Pos < x_max and self.Y_Pos > y_min and self.Y_Pos < y_max:
+            return True
+        else:
+            return False
+    
+    # desiredOrientation - number from 0 to 359
+    def orientationControl(self, desiredOrientation):
+        print ('### START ORIENTATION CONTROL ###')
+        
+        errorAngle = ((((desiredOrientation - self.Orientation) % 360) + 540) % 360) - 180;
+        print ('Current: %d, Desired %d, errorAngle: %d' % (self.Orientation, desiredOrientation, errorAngle))
+        
+        # set the max steering change per loop iteration
+        maxSteeringChange = 10
+
+        # map angles into steering dictionary
+        requiredSteering = int(abs(62/180 * errorAngle))
+        print ('Required Steering: %d' % (requiredSteering))
+            
+        if(errorAngle < 0):
+            # left turn
+            self.steering -= min(maxSteeringChange, abs(errorAngle))
+            self.steering = max(self.steering, -62)                
+        elif (errorAngle > 0):
+            # right turn
+            self.steering += min(maxSteeringChange, abs(errorAngle))
+            self.steering = min(self.steering, 62)            
+
+        # Send steering command
+        if self.steering >= 0:
+            print ('Steering RIGHT intensity %d' % abs(self.steering))
+            self.sock.send(binascii.a2b_hex(self.dict['STEER_RIGHT'][self.steering]))
+        elif self.steering < 0:
+            print ('Steering LEFT with intensity %d' % abs(self.steering))
+            self.sock.send(binascii.a2b_hex(self.dict['STEER_LEFT'][abs(self.steering)]))
+    
     def horn(self):
         self.sock.send(binascii.a2b_hex(self.dict['HORN_ON']))
         sleep(0.5)
