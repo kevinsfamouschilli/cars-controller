@@ -10,6 +10,7 @@ from PyQt4.QtGui import QApplication, QMainWindow
 from PyQt4 import QtCore,QtGui
 from ui import Ui_MainWindow, Ui_CV
 from time import *
+import math
 
 from timer import Timer
 
@@ -32,16 +33,16 @@ class service(socketserver.BaseRequestHandler):
                 self.data = self.request.recv(1024)
                 if not self.data:
                     break
-                print('Handling request')
-            print ("=> Receiving request elapsed: %s s" % t.secs)
+                #print('Handling request')
+            #print ("=> Receiving request elapsed: %s s" % t.secs)
 
             with Timer() as t:
                 self.data = self.data.strip()
-            print ("=> Strip data elapsed: %s s" % t.secs)
+            #print ("=> Strip data elapsed: %s s" % t.secs)
 
             with Timer() as t:
                 self.server.signal.emit(self.data)
-            print ("=> Emit signal elapsed: %s s" % t.secs)
+            #print ("=> Emit signal elapsed: %s s" % t.secs)
 
         with Timer() as t:  
             print('Closing socket...')
@@ -184,11 +185,11 @@ class MainWindow(QMainWindow):
     def readJSON(self,data):
         with Timer() as t:
             datastr = data.decode('utf-8')
-            print("old: " + datastr)
+            #print("old: " + datastr)
             datastr = "{" + find_between_r(datastr,"{","}") + "}"
-            print("new: " + datastr)
+            #print("new: " + datastr)
             cv_json = json.loads(datastr)
-        print ("=> json.loads and decoding: %s s" % t.secs)
+        #print ("=> json.loads and decoding: %s s" % t.secs)
 
         with Timer() as t:
 
@@ -217,7 +218,7 @@ class MainWindow(QMainWindow):
                     else :
                         print("Car " + vis_obj.MAC_Address + " not in dictionary of cars.")
                         
-        print ("=> for loop on json kv pairs: %s s" % t.secs)
+        #print ("=> for loop on json kv pairs: %s s" % t.secs)
 
 def find_between_r( s, first, last ):
     try:
@@ -295,43 +296,20 @@ class car:
         self.X_Vel = stateVariables.X_Vel
         self.Y_Vel = stateVariables.Y_Vel
         
-    def decideAction(self):
-        border = 100;
-        x_max = 1200 - border;
-        x_min = 0 + border;
-        y_max = 900 - border;
-        y_min = 0 + border;
-        
-        if (carIsWithinBounds() && carIsInFreeSpace()):
-            print("Car in bounds and free space... driving")
-            with Timer() as t:
-                self.acceleration=20
-                self.sock.send(binascii.a2b_hex(self.dict['SPEED_FRONT'][self.acceleration]))
-            print ("=> sending drive command elapsed: %s s" % t.secs)
-
-            # set steering to maintain left to right path
-            orientationControl(180)
-        else:
-            # if out of bounds, then stop
-            print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
-            print("Car out of bounds or going to collide... stopping.")
-            self.stop()
-        
-        # TODO: stop if we are going to hit another car
-
+    def distance(self, x1,y1,x2,y2):
+        return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+    
     # Check car is not going to hit a vision object
     def carIsInFreeSpace(self):
-        for vis_obj in vision_objects:
+        for vis_obj in self.Vision_Objects:
             if vis_obj.MAC_Address != self.MAC_Address:
-                if(distance(self.X_Pos, self.Y_Pos,vis_obj.X_Pos, vis_obj.Y_Pos) < 50):
+                if(self.distance(self.X_Pos, self.Y_Pos,vis_obj.X_Pos, vis_obj.Y_Pos) < 500):
                     print("Car too close to other object in sight")
                     return False
-                
+                else:
+                    print("Car not too close to other object")
         # Got this far without finding anything in our zone, so must be in free space
         return True
-
-    def distance(x1,y1,x2,y2):
-        return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
     
     # Check car is within bounds
     def carIsWithinBounds(self):        
@@ -346,38 +324,65 @@ class car:
             return True
         else:
             return False
+
+    def calculateSpeed(self):
+        return math.sqrt(self.X_Vel**2 + self.Y_Vel**2)
     
     # desiredOrientation - number from 0 to 359
     def orientationControl(self, desiredOrientation):
+
+        # Can't do anything too slow as the orientation value is incorrectly reported as zero
+        if(self.calculateSpeed() < 25):
+            return
+        
         print ('### START ORIENTATION CONTROL ###')
         
         errorAngle = ((((desiredOrientation - self.Orientation) % 360) + 540) % 360) - 180;
         print ('Current: %d, Desired %d, errorAngle: %d' % (self.Orientation, desiredOrientation, errorAngle))
-        
-        # set the max steering change per loop iteration
-        maxSteeringChange = 10
+        sensitivity = 0.5
+        self.steering = int(errorAngle * sensitivity)
 
-        # map angles into steering dictionary
-        requiredSteering = int(abs(62/180 * errorAngle))
-        print ('Required Steering: %d' % (requiredSteering))
-            
-        if(errorAngle < 0):
-            # left turn
-            self.steering -= min(maxSteeringChange, abs(errorAngle))
-            self.steering = max(self.steering, -62)                
-        elif (errorAngle > 0):
-            # right turn
-            self.steering += min(maxSteeringChange, abs(errorAngle))
-            self.steering = min(self.steering, 62)            
+        # Upper and lower bound the amount of steering
+        maxSteering = 50
+        if(self.steering > maxSteering):
+            self.steering = maxSteering
+        elif(self.steering < -maxSteering):
+            self.steering = -maxSteering
 
         # Send steering command
-        if self.steering >= 0:
+        if self.steering > 0:
             print ('Steering RIGHT intensity %d' % abs(self.steering))
             self.sock.send(binascii.a2b_hex(self.dict['STEER_RIGHT'][self.steering]))
         elif self.steering < 0:
             print ('Steering LEFT with intensity %d' % abs(self.steering))
             self.sock.send(binascii.a2b_hex(self.dict['STEER_LEFT'][abs(self.steering)]))
-    
+        else:
+            print ('Steering STRAIGHT')
+            self.sock.send(binascii.a2b_hex(self.dict['NO_STEER']))
+
+    def decideAction(self):
+        border = 100;
+        x_max = 1200 - border;
+        x_min = 0 + border;
+        y_max = 900 - border;
+        y_min = 0 + border;
+        
+        if (self.carIsWithinBounds() and self.carIsInFreeSpace()):
+            print("Car in bounds and free space... driving")
+            with Timer() as t:
+                self.acceleration=15
+                self.sock.send(binascii.a2b_hex(self.dict['SPEED_FRONT'][self.acceleration]))
+            print ("=> sending drive command elapsed: %s s" % t.secs)
+
+            # set steering to maintain left to right path
+            self.orientationControl(90)
+        else:
+            # if out of bounds, then stop
+            print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
+            print("Car out of bounds or going to collide... stopping.")
+            self.stop()
+
+        
     def horn(self):
         self.sock.send(binascii.a2b_hex(self.dict['HORN_ON']))
         sleep(0.5)
