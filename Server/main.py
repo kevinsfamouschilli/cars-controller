@@ -303,7 +303,9 @@ class car:
     def carIsInFreeSpace(self):
         for vis_obj in self.Vision_Objects:
             if vis_obj.MAC_Address != self.MAC_Address:
-                if(self.distance(self.X_Pos, self.Y_Pos,vis_obj.X_Pos, vis_obj.Y_Pos) < 500):
+                distanceToObject = self.distance(self.X_Pos, self.Y_Pos,vis_obj.X_Pos, vis_obj.Y_Pos)
+                print("Distance to other car: %d mm" % distanceToObject)
+                if(distanceToObject < 150):
                     print("Car too close to other object in sight")
                     return False
                 else:
@@ -381,7 +383,6 @@ class car:
             print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
             print("Car out of bounds or going to collide... stopping.")
             self.stop()
-
         
     def horn(self):
         self.sock.send(binascii.a2b_hex(self.dict['HORN_ON']))
