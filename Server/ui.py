@@ -10,6 +10,7 @@
 from PyQt4 import QtCore, QtGui
 import time
 import random
+import common
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -32,12 +33,7 @@ class Ui_CV(QtGui.QWidget):
         self.initUI()
         
     def initUI(self):
-        # List of vision objects to draw
-        self.vision_objects = []
-
-        # Cars to draw
-        self.cars = {}
-
+        
         self.pens = {}
         
         self.initialisePens()
@@ -63,22 +59,15 @@ class Ui_CV(QtGui.QWidget):
         self.pens["CAR_TO_TARGET_LINE"] = pen
         
     def paintEvent(self, e):
-        self.drawVisionObjects()
+       # self.drawVisionObjects()
         self.drawCars()
 
-    def updateVisionObjects(self,vision_objects):
-        self.vision_objects = vision_objects
-        self.repaint()
-
-    def updateCars(self,cars):
-        self.cars = cars
-        self.repaint()
-
     def drawCars(self):
+
         qp = QtGui.QPainter()
         qp.begin(self)
 
-        for mac,car in self.cars.items():
+        for mac,car in common.cars.items():
             # Draw current position
             qp.setPen(self.pens["CAR_POSITION"])  
             qp.drawPoint(car.X_Pos, car.Y_Pos)
@@ -98,7 +87,7 @@ class Ui_CV(QtGui.QWidget):
         
         qp.setPen(self.pens["CAR_POSITION"])
         
-        for vis_obj in self.vision_objects:
+        for vis_obj in vision_objects:
             if (vis_obj.Object_Type != 1): #dont draw cars
                 qp.drawPoint(vis_obj.X_Pos, vis_obj.Y_Pos)
         qp.end()

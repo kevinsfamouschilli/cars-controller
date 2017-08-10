@@ -11,13 +11,17 @@ from PyQt4 import QtCore,QtGui
 from ui import Ui_MainWindow, Ui_CV
 import time
 import math
-
+import common
 
 from timer import Timer
 
 # Use to debug without needing real cars connected
 offlineMode = False
 cvDataWindow = True
+
+# cars global
+
+
 
 class ServerThread(QtCore.QThread):
     json_received = QtCore.pyqtSignal(object)
@@ -66,9 +70,6 @@ class MainWindow(QMainWindow):
             self.cvwindow = Ui_CV()
             self.cvwindow.show()
 
-        # Dictionary for storing cars indexed by MAC address
-        self.cars = {}
-
         # (Legacy) A list of all the car objects that are currently connected
         self.listcars = []
         
@@ -100,7 +101,7 @@ class MainWindow(QMainWindow):
                 
         if(offlineMode):
             newcar = car('00:06:66:61:A3:48', 0, self.listcars)
-            self.cars['00:06:66:61:A3:48']= newcar
+            cars['00:06:66:61:A3:48']= newcar
         
     
     #This cycles through the connected cars, changing which one is being controlled
@@ -183,7 +184,7 @@ class MainWindow(QMainWindow):
         newcar = car(host, port, self.listcars)
 
         # Add the new car to our dictionary of cars
-        self.cars[host]= newcar
+        common.cars[host]= newcar
         
         self.listcars.append(newcar)
         print("New car added")
@@ -230,30 +231,26 @@ class MainWindow(QMainWindow):
                 # If the object is a car
                 if vis_obj.Object_Type == 1:
                     # If car exists in dictionary
-                    if vis_obj.MAC_Address in self.cars:                        
+                    if vis_obj.MAC_Address in common.cars:                        
                         # update the corresponding car based on MAC
-                        self.cars[vis_obj.MAC_Address].updateStateFromVisionObject(vis_obj)
+                        common.cars[vis_obj.MAC_Address].updateStateFromVisionObject(vis_obj)
 
                         # update corresponding car precepts
-                        self.cars[vis_obj.MAC_Address].updatePrecepts(vision_objects)
-                        
-                        
+                        common.cars[vis_obj.MAC_Address].updatePrecepts(vision_objects)
+                                                
                         # Cars to make decisions based on updated vision        
-                        self.cars[vis_obj.MAC_Address].decidedAction()
+                        common.cars[vis_obj.MAC_Address].decideAction()
                     else :
                         print("Car " + vis_obj.MAC_Address + " not in dictionary of cars.")
 
             millis = int(round(time.time()*1000))
             print("Delay exclude display update: %d ms" % (millis - referenceTime))
-            
-            if(cvDataWindow):
-                #self.cvwindow.updateVisionObjects(vision_objects)
-                self.cvwindow.updateCars(self.cars)
-        #print ("=> for loop on json kv pairs: %s s" % t.secs)
 
+            if(cvDataWindow):     
+                self.cvwindow.update()
+            
             millis = int(round(time.time()*1000))
             print("Total Delay: %d ms" % (millis - referenceTime))
-                    
 
 def find_between_r( s, first, last ):
     try:
@@ -435,7 +432,6 @@ class car:
                 self.orientationControl(self.getOrientationToTarget())
             else:
                 # if out of bounds, then stop
-                print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
                 print("Car out of bounds or going to collide... stopping.")
                 self.stop()
         
