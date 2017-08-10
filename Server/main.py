@@ -16,6 +16,7 @@ from timer import Timer
 
 # Use to debug without needing real cars connected
 offlineMode = False
+cvDataWindow = False
 
 class ServerThread(QtCore.QThread):
     json_received = QtCore.pyqtSignal(object)
@@ -60,8 +61,9 @@ class MainWindow(QMainWindow):
         QMainWindow.__init__(self)
 
         # Start window which visualises the CV data
-        self.cvwindow = Ui_CV()
-        self.cvwindow.show()
+        if (cvDataWindow):
+            self.cvwindow = Ui_CV()
+            self.cvwindow.show()
 
         # Dictionary for storing cars indexed by MAC address
         self.cars = {}
@@ -216,7 +218,8 @@ class MainWindow(QMainWindow):
                 vision_objects.append(vis_obj)
 
             # Display on screen
-            self.cvwindow.updateVisionObjects(vision_objects)           
+            if(cvDataWindow):
+                self.cvwindow.updateVisionObjects(vision_objects)           
             
             for vis_obj in vision_objects:
                 # If the object is a car
@@ -235,7 +238,8 @@ class MainWindow(QMainWindow):
                     else :
                         print("Car " + vis_obj.MAC_Address + " not in dictionary of cars.")
 
-            self.cvwindow.updateCars(self.cars)
+            if(cvDataWindow):
+                self.cvwindow.updateCars(self.cars)
         #print ("=> for loop on json kv pairs: %s s" % t.secs)
 
 def find_between_r( s, first, last ):
