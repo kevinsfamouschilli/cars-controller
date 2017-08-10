@@ -14,6 +14,9 @@ import math
 
 from timer import Timer
 
+# Use to debug without needing real cars connected
+offlineMode = False
+
 class ServerThread(QtCore.QThread):
     json_received = QtCore.pyqtSignal(object)
 
@@ -56,6 +59,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
 
+        # Start window which visualises the CV data
+        self.cvwindow = Ui_CV()
+        self.cvwindow.show()
+
         # Dictionary for storing cars indexed by MAC address
         self.cars = {}
 
@@ -86,6 +93,12 @@ class MainWindow(QMainWindow):
         
         # Start the threaded socket server
         self.start_server()
+
+                
+        if(offlineMode):
+            newcar = car('00:06:66:61:A3:48', 0, self.listcars)
+            self.cars['00:06:66:61:A3:48']= newcar
+        
     
     #This cycles through the connected cars, changing which one is being controlled
     #It flashes the lights of the current car
@@ -202,6 +215,9 @@ class MainWindow(QMainWindow):
                 vis_obj = vision_object(key, value)
                 vision_objects.append(vis_obj)
 
+            # Display on screen
+            self.cvwindow.updateVisionObjects(vision_objects)           
+            
             for vis_obj in vision_objects:
                 # If the object is a car
                 if vis_obj.Object_Type == 1:
@@ -213,11 +229,13 @@ class MainWindow(QMainWindow):
                         # update corresponding car precepts
                         self.cars[vis_obj.MAC_Address].updatePrecepts(vision_objects)
                         
+                        
                         # Cars to make decisions based on updated vision        
                         self.cars[vis_obj.MAC_Address].decideAction()
                     else :
                         print("Car " + vis_obj.MAC_Address + " not in dictionary of cars.")
-                        
+
+            self.cvwindow.updateCars(self.cars)
         #print ("=> for loop on json kv pairs: %s s" % t.secs)
 
 def find_between_r( s, first, last ):
@@ -262,8 +280,8 @@ class car:
         self.action_dict = {'horn' : 0, 'lights' : 0, 'fault' : 0,}
         self.acceleration = 0
         self.steering = 0
-        
-        #self.targets = [(250,450),(600,700),(950,450),(600,200)]
+
+        # Defines the rounded rectange path which the car will follow
         self.targets = [(180,450),(250,630),(425,730),(790,730),(970,630),(1030,450),(970,270),(790,170),(445,170),(250,260)]
         self.currentTarget = 0
         
@@ -284,8 +302,9 @@ class car:
         self.dict['NO_STEER'] = '8100'
         
         # Create the client socket
-        self.sock=BluetoothSocket( RFCOMM )
-        self.sock.connect((host, port))
+        if(not offlineMode):
+            self.sock=BluetoothSocket( RFCOMM )
+            self.sock.connect((host, port))
         
         length = len(listcars)
 
@@ -386,27 +405,22 @@ class car:
             print("Car targetting (%d,%d)" % (self.targets[self.currentTarget][0], self.targets[self.currentTarget][1]))
         
     def decideAction(self):
-        border = 100;
-        x_max = 1200 - border;
-        x_min = 0 + border;
-        y_max = 900 - border;
-        y_min = 0 + border;
-        
-        if (self.carIsWithinBounds() and self.carIsInFreeSpace()):
-            print("Car in bounds and free space... driving")
-            with Timer() as t:
-                self.acceleration=15
-                self.sock.send(binascii.a2b_hex(self.dict['SPEED_FRONT'][self.acceleration]))
-            print ("=> sending drive command elapsed: %s s" % t.secs)          
+        if(not offlineMode):        
+            if (self.carIsWithinBounds() and self.carIsInFreeSpace()):
+                print("Car in bounds and free space... driving")
+                with Timer() as t:
+                    self.acceleration=15
+                    self.sock.send(binascii.a2b_hex(self.dict['SPEED_FRONT'][self.acceleration]))
+                print ("=> sending drive command elapsed: %s s" % t.secs)          
 
-            self.checkCarAtTarget()
-            
-            self.orientationControl(self.getOrientationToTarget())
-        else:
-            # if out of bounds, then stop
-            print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
-            print("Car out of bounds or going to collide... stopping.")
-            self.stop()
+                self.checkCarAtTarget()
+                
+                self.orientationControl(self.getOrientationToTarget())
+            else:
+                # if out of bounds, then stop
+                print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
+                print("Car out of bounds or going to collide... stopping.")
+                self.stop()
         
     def horn(self):
         self.sock.send(binascii.a2b_hex(self.dict['HORN_ON']))
@@ -435,7 +449,7 @@ def main():
     window = MainWindow()
     window.show()
     
-    #cvwindow = Ui_CV()
+    
     
     sys.exit(app.exec_())  
 

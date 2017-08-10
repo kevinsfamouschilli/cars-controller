@@ -26,25 +26,83 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_CV(QtGui.QWidget):
-    
+
     def __init__(self):
         super(Ui_CV, self).__init__()        
         self.initUI()
         
-    def initUI(self):      
+    def initUI(self):
+        # List of vision objects to draw
+        self.vision_objects = []
+
+        # Cars to draw
+        self.cars = {}
+
+        self.pens = {}
+        
+        self.initialisePens()
+        
         self.setGeometry(300, 300, 1200, 900)
         self.setWindowTitle('Computer Vision Display')
         self.show()
 
-    def paintEvent(self, e):  
+    def initialisePens(self):
+        pen = QtGui.QPen()
+        pen.setWidth(8)
+        pen.setColor(QtGui.QColor(255,0,0,255))
+        self.pens["CAR_POSITION"] = pen
+
+        pen = QtGui.QPen()
+        pen.setWidth(5)
+        pen.setColor(QtGui.QColor(0,0,0,255))
+        self.pens["TARGET_POSITION"] = pen
+
+        pen = QtGui.QPen()
+        pen.setWidth(1)
+        pen.setColor(QtGui.QColor(0,0,0,255))
+        self.pens["CAR_TO_TARGET_LINE"] = pen
+        
+    def paintEvent(self, e):
+        self.drawVisionObjects()
+        self.drawCars()
+
+    def updateVisionObjects(self,vision_objects):
+        self.vision_objects = vision_objects
+        self.repaint()
+
+    def updateCars(self,cars):
+        self.cars = cars
+        self.repaint()
+
+    def drawCars(self):
         qp = QtGui.QPainter()
         qp.begin(self)
-        self.drawPoints(qp)
+
+        for mac,car in self.cars.items():
+            # Draw current position
+            qp.setPen(self.pens["CAR_POSITION"])  
+            qp.drawPoint(car.X_Pos, car.Y_Pos)
+
+            # Draw line between current and target
+            qp.setPen(self.pens["CAR_TO_TARGET_LINE"])
+            qp.drawLine(QtCore.QLineF(car.X_Pos, car.Y_Pos,car.targets[car.currentTarget][0], car.targets[car.currentTarget][1]))
+            
+            # Draw target position
+            qp.setPen(self.pens["TARGET_POSITION"])  
+            qp.drawPoint(car.targets[car.currentTarget][0], car.targets[car.currentTarget][1])
         qp.end()
         
-    def drawPoints(self, qp):
-        qp.drawPoint(5, 5)
-            
+    def drawVisionObjects(self):
+        qp = QtGui.QPainter()
+        qp.begin(self)
+        
+        qp.setPen(self.pens["CAR_POSITION"])
+        
+        for vis_obj in self.vision_objects:
+            if (vis_obj.Object_Type != 1): #dont draw cars
+                qp.drawPoint(vis_obj.X_Pos, vis_obj.Y_Pos)
+        qp.end()
+        
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow, length):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
