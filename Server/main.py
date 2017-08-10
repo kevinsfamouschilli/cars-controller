@@ -263,7 +263,8 @@ class car:
         self.acceleration = 0
         self.steering = 0
         
-        self.targets = [(250,450),(600,700),(950,450),(600,200)]
+        #self.targets = [(250,450),(600,700),(950,450),(600,200)]
+        self.targets = [(180,450),(250,630),(425,730),(790,730),(970,630),(1030,450),(970,270),(790,170),(445,170),(250,260)]
         self.currentTarget = 0
         
         # List of available commands
@@ -378,7 +379,7 @@ class car:
     def checkCarAtTarget(self):
         
         distanceToTarget = self.distance(self.X_Pos, self.Y_Pos,self.targets[self.currentTarget][0], self.targets[self.currentTarget][1])
-        if(distanceToTarget < 150):
+        if(distanceToTarget < 75):
             self.currentTarget = (self.currentTarget + 1) % len(self.targets)
             print("Car targetting (%d,%d)" % (self.targets[self.currentTarget][0], self.targets[self.currentTarget][1]))
         else:
