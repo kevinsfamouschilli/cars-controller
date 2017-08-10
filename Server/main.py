@@ -25,7 +25,7 @@ class ServerThread(QtCore.QThread):
         t.signal = self.json_received
         t.serve_forever()
         
-class service(socketserver.BaseRequestHandler):    
+class service(socketserver.BaseRequestHandler):
     def handle(self):
         
         while 1:
@@ -261,7 +261,10 @@ class car:
         
         self.action_dict = {'horn' : 0, 'lights' : 0, 'fault' : 0,}
         self.acceleration = 0
-        self.steering = 0        
+        self.steering = 0
+        
+        self.targets = [(250,450),(600,700),(950,450),(600,200)]
+        self.currentTarget = 0
         
         # List of available commands
         self.dict = {}
@@ -295,7 +298,17 @@ class car:
         self.Y_Pos = stateVariables.Y_Pos      
         self.X_Vel = stateVariables.X_Vel
         self.Y_Vel = stateVariables.Y_Vel
-        
+
+    def getOrientationToTarget(self):
+        displacementX = self.targets[self.currentTarget][0] - self.X_Pos
+        displacementY = self.targets[self.currentTarget][1] - self.Y_Pos
+
+        displacementOrientation = (90 - 180/math.pi*math.atan2(displacementY, displacementX));
+        if (displacementOrientation < 0):
+                displacementOrientation = 360 + displacementOrientation;
+				
+        return displacementOrientation
+    
     def distance(self, x1,y1,x2,y2):
         return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
     
@@ -362,6 +375,15 @@ class car:
             print ('Steering STRAIGHT')
             self.sock.send(binascii.a2b_hex(self.dict['NO_STEER']))
 
+    def checkCarAtTarget(self):
+        
+        distanceToTarget = self.distance(self.X_Pos, self.Y_Pos,self.targets[self.currentTarget][0], self.targets[self.currentTarget][1])
+        if(distanceToTarget < 150):
+            self.currentTarget = (self.currentTarget + 1) % len(self.targets)
+            print("Car targetting (%d,%d)" % (self.targets[self.currentTarget][0], self.targets[self.currentTarget][1]))
+        else:
+            print("Car targetting (%d,%d)" % (self.targets[self.currentTarget][0], self.targets[self.currentTarget][1]))
+        
     def decideAction(self):
         border = 100;
         x_max = 1200 - border;
@@ -374,10 +396,11 @@ class car:
             with Timer() as t:
                 self.acceleration=15
                 self.sock.send(binascii.a2b_hex(self.dict['SPEED_FRONT'][self.acceleration]))
-            print ("=> sending drive command elapsed: %s s" % t.secs)
+            print ("=> sending drive command elapsed: %s s" % t.secs)          
 
-            # set steering to maintain left to right path
-            self.orientationControl(90)
+            self.checkCarAtTarget()
+            
+            self.orientationControl(self.getOrientationToTarget())
         else:
             # if out of bounds, then stop
             print("X_Pos %d, X_Min %d, X_Max %d, Y_Pos %d, Y_Min %d, Y_Max %d" % (self.X_Pos,x_min,x_max,self.Y_Pos,y_min,y_max))
