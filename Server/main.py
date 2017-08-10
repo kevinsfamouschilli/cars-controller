@@ -9,14 +9,15 @@ import json
 from PyQt4.QtGui import QApplication, QMainWindow
 from PyQt4 import QtCore,QtGui
 from ui import Ui_MainWindow, Ui_CV
-from time import *
+import time
 import math
+
 
 from timer import Timer
 
 # Use to debug without needing real cars connected
 offlineMode = False
-cvDataWindow = False
+cvDataWindow = True
 
 class ServerThread(QtCore.QThread):
     json_received = QtCore.pyqtSignal(object)
@@ -198,11 +199,14 @@ class MainWindow(QMainWindow):
         server.start()
         
     def readJSON(self,data):
+
+        referenceTime = 0
+        
         with Timer() as t:
             datastr = data.decode('utf-8')
-            #print("old: " + datastr)
+            print(datastr)
             datastr = "{" + find_between_r(datastr,"{","}") + "}"
-            #print("new: " + datastr)
+            print(datastr)
             cv_json = json.loads(datastr)
         #print ("=> json.loads and decoding: %s s" % t.secs)
 
@@ -212,14 +216,15 @@ class MainWindow(QMainWindow):
             
             # For loop on each k-v pair in the json
             for key, value in cv_json.items():
-                # Initialise a vision object
-                #print(value)
-                vis_obj = vision_object(key, value)
-                vision_objects.append(vis_obj)
-
-            # Display on screen
-            if(cvDataWindow):
-                self.cvwindow.updateVisionObjects(vision_objects)           
+                if(key != "time"):
+                    # Initialise a vision object
+                    #print(value)
+                    vis_obj = vision_object(key, value)
+                    vision_objects.append(vis_obj)
+                elif (key == "time"):
+                    millis = int(round(time.time()*1000))
+                    referenceTime = value
+                    print("Transmission Delay: %d ms" % (millis - value))
             
             for vis_obj in vision_objects:
                 # If the object is a car
@@ -234,13 +239,21 @@ class MainWindow(QMainWindow):
                         
                         
                         # Cars to make decisions based on updated vision        
-                        self.cars[vis_obj.MAC_Address].decideAction()
+                        self.cars[vis_obj.MAC_Address].decidedAction()
                     else :
                         print("Car " + vis_obj.MAC_Address + " not in dictionary of cars.")
 
+            millis = int(round(time.time()*1000))
+            print("Delay exclude display update: %d ms" % (millis - referenceTime))
+            
             if(cvDataWindow):
+                #self.cvwindow.updateVisionObjects(vision_objects)
                 self.cvwindow.updateCars(self.cars)
         #print ("=> for loop on json kv pairs: %s s" % t.secs)
+
+            millis = int(round(time.time()*1000))
+            print("Total Delay: %d ms" % (millis - referenceTime))
+                    
 
 def find_between_r( s, first, last ):
     try:
