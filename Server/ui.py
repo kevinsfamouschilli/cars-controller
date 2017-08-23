@@ -93,7 +93,7 @@ class Ui_CV(QtGui.QWidget):
         qp.end()
         
 class Ui_MainWindow(object):
-    def setupUi(self, MainWindow, length):
+    def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(300, 300) #Width and height of the window
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
@@ -118,12 +118,10 @@ class Ui_MainWindow(object):
         self.quitPB.setGeometry(QtCore.QRect(210, 15, 75, 25))
         self.quitPB.setObjectName(_fromUtf8("quitPB"))
 
-
         self.lineEdit = QtGui.QLineEdit(self.centralwidget)
         self.lineEdit.setGeometry(QtCore.QRect(15, 55, 270, 25))
         self.lineEdit.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         self.lineEdit.setObjectName(_fromUtf8("lineEdit"))
-
 
         self.RunPB = QtGui.QPushButton(self.centralwidget)
         self.RunPB.setGeometry(QtCore.QRect(15, 95, 75, 25))
@@ -133,7 +131,6 @@ class Ui_MainWindow(object):
         self.StopPB.setGeometry(QtCore.QRect(15, 135, 75, 25))
         self.StopPB.setObjectName(_fromUtf8("StopPB"))
 
-
         self.CarSwitch = QtGui.QPushButton(self.centralwidget)
         self.CarSwitch.setGeometry(QtCore.QRect(210, 95, 75, 25))
         self.CarSwitch.setObjectName(_fromUtf8("CarSwitch"))
@@ -142,15 +139,10 @@ class Ui_MainWindow(object):
         self.CarAll.setGeometry(QtCore.QRect(210, 135, 75, 25))
         self.CarAll.setObjectName(_fromUtf8("CarAll"))
 
-        
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtGui.QStatusBar(MainWindow)
         self.statusbar.setObjectName(_fromUtf8("statusbar"))
         MainWindow.setStatusBar(self.statusbar)
-
-        
-
-
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         self.MainWindow=MainWindow
@@ -164,6 +156,4 @@ class Ui_MainWindow(object):
         self.CarSwitch.setText(_translate("MainWindow", "Switch Car", None))
         self.CarAll.setText(_translate("MainWindow", "Control All", None))
         self.CarTest.setText(_translate("MainWindow", "Test Connection", None))
-    
-        
 
