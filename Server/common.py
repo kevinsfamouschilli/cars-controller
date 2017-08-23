@@ -1,2 +1,5 @@
 # Dictionary for storing cars indexed by MAC address
-cars = {}
+#cars = {}
+
+# List of currently connected cars
+cars = []

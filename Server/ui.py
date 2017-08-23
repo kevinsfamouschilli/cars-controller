@@ -67,7 +67,7 @@ class Ui_CV(QtGui.QWidget):
         qp = QtGui.QPainter()
         qp.begin(self)
 
-        for mac,car in common.cars.items():
+        for car in common.cars:
             # Draw current position
             qp.setPen(self.pens["CAR_POSITION"])  
             qp.drawPoint(car.X_Pos, car.Y_Pos)

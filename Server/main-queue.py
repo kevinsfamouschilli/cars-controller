@@ -17,8 +17,8 @@ import errno
 import select
 from timer import Timer
 
-# Use to show the CV position of cars on the screen
-cvDataWindow = True
+# Use to debug without needing real cars connected
+cvDataWindow = False
 
 # List of MAC addresses to automatically connect to
 addresses = [
@@ -32,17 +32,11 @@ bt_running = True
 # Whether or not the CV is connected to the socket and providing data
 cv_running = False
 
-num_queued = 0
-num_sent = 0
-num_skipped = 0
-
 def process():
     """
     Send outgoing messages to cars
     """
     readSocket = False
-
-    global num_sent
     
     while bt_running:
         for car in common.cars:
@@ -50,15 +44,13 @@ def process():
                 can_read, can_write, has_error = select.select([], [car.socket], [], 0)
                 if car.socket in can_write:
                     try:
-                        item = car.out_dict.popitem()
-                    except KeyError:
-                        #dictionary is empty
+                        item = car.out_queue.get(False)
+                    except queue.Empty:
                         pass
                     else:
-                        car.socket.send(item[0])
-                        num_sent += 1
+                        car.socket.send(item[1])
                         millis = int(round(time.time()*1000))
-                        print("System Delay: %d ms" % (millis - item[1]))
+                        print("System Delay: %d ms" % (millis - item[0]))
                 
             except (BluetoothError, OSError, ValueError) as e:
                 print(e)
@@ -205,7 +197,6 @@ class MainWindow(QMainWindow):
         # Decode jsondata into k-v pairs
         datastr = data.decode('utf-8')
         datastr = "{" + find_between_r(datastr,"{","}") + "}"
-        #print(datastr)
         cv_json = json.loads(datastr)
         
         # Precepts for the cars - at the moment this is everything visible
@@ -297,19 +288,11 @@ class Car:
         
         # Create the client socket
         self.socket = socket
-
-        # Create dictionary for storing output messages
-        self.out_dict = dict()
+        self.out_queue = queue.Queue()
 
     # Queue given command with associated time
     def queueCommand(self, command):
-        global num_queued
-        #self.out_queue.put([self.preceptTime, command])
-        try:
-            self.out_dict[command] = self.preceptTime
-            num_queued += 1
-        except (KeyError) as e:
-            print("Key error %s" % e)
+        self.out_queue.put([self.preceptTime, command])
 
     def updatePreceptTime(self, newTime):
         self.preceptTime = newTime
@@ -370,9 +353,7 @@ class Car:
     
     # desiredOrientation - number from 0 to 359
     def orientationControl(self, desiredOrientation):
-        global num_skipped
-        requiredSteering = 0
-        
+
         # Can't do anything if we are too slow as the orientation value is incorrectly reported as zero
         if(self.calculateSpeed() < 25):
             return
@@ -382,27 +363,23 @@ class Car:
         errorAngle = ((((desiredOrientation - self.Orientation) % 360) + 540) % 360) - 180;
         #print ('Current: %d, Desired %d, errorAngle: %d' % (self.Orientation, desiredOrientation, errorAngle))
         sensitivity = 0.5
-        requiredSteering = int(errorAngle * sensitivity)
+        self.steering = int(errorAngle * sensitivity)
 
         # Upper and lower bound the amount of steering
         maxSteering = 50
-        if(requiredSteering > maxSteering):
-            requiredSteering = maxSteering
-        elif(requiredSteering < -maxSteering):
-            requiredSteering = -maxSteering
+        if(self.steering > maxSteering):
+            self.steering = maxSteering
+        elif(self.steering < -maxSteering):
+            self.steering = -maxSteering
 
-        # Only send steering command if we need to change
-        if (self.steering != requiredSteering):
-            self.steering = requiredSteering
-            # Send steering command
-            if self.steering != 0:
-                #print ('Steering with intensity %d' % self.steering)
-                self.queueCommand(bytes([STEERING, self.steering & 0x7f]))
-            else:
-                #print ('Steering STRAIGHT')
-                self.queueCommand(bytes([STEERING, 0]))
-        else :
-            num_skipped += 1
+        # Send steering command
+        if self.steering != 0:
+            #print ('Steering with intensity %d' % self.steering)
+            self.queueCommand(bytes([STEERING, self.steering & 0x7f]))
+        else:
+            #print ('Steering STRAIGHT')
+            self.queueCommand(bytes([STEERING, 0]))
+
     def checkCarAtTarget(self):        
         distanceToTarget = self.distance(self.X_Pos, self.Y_Pos,self.targets[self.currentTarget][0], self.targets[self.currentTarget][1])
         if(distanceToTarget < 75):
@@ -416,18 +393,14 @@ class Car:
         if (self.carIsWithinBounds() and self.carIsInFreeSpace()):
             #print("Car in bounds and free space... driving")
 
-            global num_skipped
-            if(self.acceleration != 25):
-                self.acceleration=25
-                self.queueCommand(bytes([THROTTLE, self.acceleration & 0x7f])) 
-            else :
-                num_skipped += 1
-            
+            self.acceleration=25
+            self.queueCommand(bytes([THROTTLE, self.acceleration & 0x7f])) 
+
             self.checkCarAtTarget()            
             self.orientationControl(self.getOrientationToTarget())
         else:
             # Stop as car is out of bounds or is going to hit something
-            print("Car out of bounds or going to collide... stopping.")
+            #print("Car out of bounds or going to collide... stopping.")
             self.stop()
         
     def horn(self):
@@ -442,48 +415,32 @@ class Car:
         self.queueCommand(bytes([HEADLIGHT, HEADLIGHT_OFF]))
 
     def run(self):
-        global num_skipped
-        if(self.acceleration != 20):
-            self.acceleration=20
-            self.queueCommand(bytes([THROTTLE, self.acceleration & 0x7f]))
-        else :
-            num_skipped += 1
+        self.acceleration=20
+        self.queueCommand(bytes([THROTTLE, self.acceleration & 0x7f]))
+        
     def stop(self):
-        global num_skipped
-        if(self.acceleration != 0):
-            self.acceleration=0
-            self.queueCommand(bytes([THROTTLE, 0]))
-        else :
-            num_skipped += 1
+        self.acceleration=0
+        self.queueCommand(bytes([THROTTLE, 0]))
 
 def connectToCars():
     # Try connect to all of our cars
     print("Connecting to cars...")
-    num_connected = 0
     for address in addresses:
         try:
             socket = BluetoothSocket(RFCOMM)
             socket.connect((address, 1))
             print("Connected to %s" % address)
             common.cars.append(Car(address, socket))
-            num_connected += 1
         except (BluetoothError, OSError) as e:
             print("Could not connect to %s because %s" % (address, e))
 
-    return num_connected
-
 def main():
 
-    global bt_running, num_sent, num_queued, num_skipped
+    global bt_running
     
     # Connect to cars
-    num_connected = connectToCars()
+    connectToCars()
 
-    # Quit if we did not find any cars
-    if(num_connected == 0):
-        print("No cars connected, shutting down...")
-        sys.exit(0)
-    
     # Start communication threads
     t_process = threading.Thread(target=process)
     t_process.daemon = True
@@ -496,7 +453,6 @@ def main():
     result = app.exec_()
 
     # Cleanup sockets
-    print('%d queued, %d sent and %d skipped' % (num_queued, num_sent, num_skipped))
     print('Shutting down...')
     bt_running = False
     t_process.join()
