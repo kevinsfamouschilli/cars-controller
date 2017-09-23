@@ -1,10 +1,10 @@
 import csv
 import os.path
-import common
+import core.common as common
 
 # Load vehicles CSV file
 def load_vehicles():
-    reader = csv.reader(open("../config/vehicles.csv", 'rt'), dialect='excel')
+    reader = csv.reader(open("./config/vehicles.csv", 'rt'), dialect='excel')
     iterator = iter(reader)
     next(iterator) # Skip header row
     for row in iterator:
@@ -21,7 +21,7 @@ def load_vehicles():
 
 # Load environment map data CSV File
 def load_map_data():
-    reader = csv.reader(open("../config/map_data.csv", 'rt'), dialect='excel')
+    reader = csv.reader(open("./config/map_data.csv", 'rt'), dialect='excel')
     iterator = iter(reader)
     next(iterator) # Skip header row
     for row in iterator:

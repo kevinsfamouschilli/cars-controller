@@ -7,14 +7,15 @@ import json
 import time
 import errno
 import select
-from ui import Ui_MainWindow, Ui_CV
 from PyQt4.QtGui import QApplication, QMainWindow
 from PyQt4 import QtCore,QtGui
 from bluetooth import *
 
-import common
-import car
-import vision_object
+from core.ui import Ui_MainWindow, Ui_CV
+import core.load_config as load_config
+import core.common as common
+import core.car as car
+import core.vision_object as vision_object
 
 def bt_send():
     """
@@ -182,6 +183,10 @@ def connectToCars():
     return num_connected
 
 def main():
+    # Load config
+    load_config.load_vehicles()
+    load_config.load_map_data()
+    
     # Connect to cars
     num_connected = connectToCars()
 

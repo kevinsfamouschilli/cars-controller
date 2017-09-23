@@ -1,4 +1,4 @@
-from protocol import *
+from core.protocol import *
 import math
 
 #An object of the car class controls a specific car

@@ -10,7 +10,7 @@
 from PyQt4 import QtCore, QtGui
 import time
 import random
-import common
+import core.common
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
