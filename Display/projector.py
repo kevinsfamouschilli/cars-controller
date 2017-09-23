@@ -13,7 +13,7 @@ white = (255,255,255)
 
 clock = pygame.time.Clock()
 crashed = False
-carImg = pygame.image.load('track.jpg')
+carImg = pygame.image.load('map_image.jpg')
 
 gameDisplay.fill(white)
 gameDisplay.blit(carImg, (0,0))
@@ -21,12 +21,18 @@ pygame.mouse.set_visible(False)
 pygame.display.update()
 
 while not crashed:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            crashed = True
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+    try:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 crashed = True
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    crashed = True
+    except KeyboardInterrupt:
+        crashed = True
+        
     pygame.time.wait(1000)
+    
 pygame.quit()
+
 quit()
