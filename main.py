@@ -186,6 +186,8 @@ def main():
     # Load config
     load_config.load_vehicles()
     load_config.load_map_data()
+
+    sys.exit(0);
     
     # Connect to cars
     num_connected = connectToCars()

@@ -13,6 +13,9 @@ cvDataWindow = True
 # List of MAC addresses to connect to
 addresses = []
     
+# Environment graph
+map_graph = None
+
 # List of currently connected cars
 cars = []
 
@@ -25,3 +28,4 @@ cv_running = False
 
 
 ''' COMMON FUNCTIONS '''
+# None for now.
