@@ -12,12 +12,6 @@ from PyQt4 import QtCore,QtGui
 from bluetooth import *
 
 from core.ui import Ui_MainWindow, Ui_CV
-'''
-import core.load_config as load_config
-import core.common as common
-import core.Vehicle
-import core.vision_object as vision_object
-'''
 from core import *
 
 def bt_send():

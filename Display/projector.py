@@ -13,7 +13,7 @@ white = (255,255,255)
 
 clock = pygame.time.Clock()
 crashed = False
-carImg = pygame.image.load('map_image.jpg')
+carImg = pygame.image.load('../config/map_image.jpg')
 
 gameDisplay.fill(white)
 gameDisplay.blit(carImg, (0,0))

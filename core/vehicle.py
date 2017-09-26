@@ -61,7 +61,6 @@ class Vehicle:
         self.preceptTime = newTime
 
     # Update this cars precepts
-    # TODO: Add to agent
     def updatePrecepts(self, visionObjects, map_graph):
         self.Vision_Objects = visionObjects
         self.agent.update_precepts(self.Orientation, self.X_Pos,self.Y_Pos, self.X_Vel,self.Y_Vel, map_graph, self.Vision_Objects)
@@ -134,16 +133,18 @@ class Vehicle:
             if (action_name == "STOP"):
                 self.stop()
             elif (action_name == "FORWARD"):
-                self.run()
+                self.acceleration=self.vehicle.filter_speed(self.acceleration, action_arg1)
+                self.queueCommand(bytes([THROTTLE, self.acceleration & 0x7f]))
             elif (action_name == "REVERSE"):
-                #TODO: Implement this
-                pass
+                self.acceleration=self.vehicle.filter_speed(self.acceleration, action_arg1)
+                self.queueCommand(bytes([THROTTLE, self.acceleration & 0x7f]))
             elif (action_name == "LEFT"):
-                #TODO: Implement this
+                self.steering = self.vehicle.filter_turn(self.steering, action_arg1)
+                self.queueCommand(bytes([STEERING, 0]))
                 pass
             elif (action_name == "RIGHT"):
-                #TODO: Implement this
-                pass
+                self.steering = self.vehicle.filter_turn(self.steering, action_arg1)
+                self.queueCommand(bytes([STEERING, 0]))
             elif (action_name == "TARGET"):
                 #TODO: Implement this
                 pass            
