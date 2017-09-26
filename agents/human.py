@@ -53,12 +53,15 @@ class Human(object):
     ["TARGET",X Coordinate,Y Coordinate]
     '''    
     def decide_actions(self):
+
+        # How close in mm until we stop driving to avoid collision with vision objects
+        collision_avoid_distance = 150
+        
         # All actions the agent wishes to take are stored in this queue
         actions_queue = deque()
 
-        # Check for wall of simulator
+        # Decide if we should stop to avoid hitting wall
         if (not self.is_car_inbounds()):
-            # Decide to stop to avoid hitting wall
             self.print_filtered("Stopping to avoid collision with wall.")
             actions_queue.append(["STOP",0,0])
             return actions_queue
@@ -69,10 +72,10 @@ class Human(object):
             # Dont detect potential collision with self
             if(vis_obj.MAC_Address == self.address):
                 continue
-            
+
+            # Decide if we should stop to avoid collision with a vision object
             distanceToObject = self.calculate_distance(self.x_pos, self.y_pos,vis_obj.X_Pos, vis_obj.Y_Pos)
-            if(distanceToObject < 150):
-                # Decide to stop to avoid collision with a vision object
+            if(distanceToObject < collision_avoid_distance):
                 self.print_filtered("Stopping to avoid collision with an object in sight.")
                 actions_queue.append(["STOP",0,0])
                 return actions_queue
@@ -94,18 +97,21 @@ class Human(object):
     Check car is within bounds
     '''
     def is_car_inbounds(self):        
-        border = 100;
+        border = 75;
         x_max = 1200 - border;
         x_min = 0 + border;
         y_max = 900 - border;
         y_min = 0 + border;
         
-        # whilst in bounds, drive at constant speed
         if self.x_pos > x_min and self.x_pos < x_max and self.y_pos > y_min and self.y_pos < y_max:
             return True
         else:
             return False
 
+    '''
+    Function which prints iff self.output is set to "Verbose"
+    Useful for development testing and debugging.
+    '''
     def print_filtered(self, output_string):
         if (self.output == "Verbose"):
             print(output_string)
