@@ -1,14 +1,17 @@
 from collections import deque
+import math
 
 class Human(object):
     
     agent_name = 'Human'
     agent_description = 'Agent modelled around human driving behavior'
-
+    output = "Verbose";
+    
     '''
     Constructor
     '''
-    def __init__(self):
+    def __init__(self, address):
+        self.address = address
         self.orientation = 0
         self.x_pos = 0
         self.y_pos = 0
@@ -49,33 +52,37 @@ class Human(object):
     ["RIGHT",AMOUNT(0-100%),0]
     ["TARGET",X Coordinate,Y Coordinate]
     '''    
-    def decide_actions():
+    def decide_actions(self):
         # All actions the agent wishes to take are stored in this queue
         actions_queue = deque()
 
         # Check for wall of simulator
-        if (not self.is_car_inbounds):
+        if (not self.is_car_inbounds()):
             # Decide to stop to avoid hitting wall
+            self.print_filtered("Stopping to avoid collision with wall.")
             actions_queue.append(["STOP",0,0])
             return actions_queue
             
         # Check vision objects
         for vis_obj in self.vision_objects:
-            distanceToObject = self.calculate_distance(self.x_pos, self.y_pos,vis_obj.x_pos, vis_obj.y_pos)
+
+            # Dont detect potential collision with self
+            if(vis_obj.MAC_Address == self.address):
+                continue
+            
+            distanceToObject = self.calculate_distance(self.x_pos, self.y_pos,vis_obj.X_Pos, vis_obj.Y_Pos)
             if(distanceToObject < 150):
                 # Decide to stop to avoid collision with a vision object
+                self.print_filtered("Stopping to avoid collision with an object in sight.")
                 actions_queue.append(["STOP",0,0])
                 return actions_queue
 
         # Not going to hit anything, so drive forward at 100%
+        self.print_filtered("Not hitting anything, so drive forward.")
         actions_queue.append(["FORWARD",100,0])
 
         # Return actions_queue
         return actions_queue
-    
-    # Check car is not going to hit a vision object
-    def check_vision_ojects(self):
-
 
     '''
     Calculate distance from (x1,y1) to (x2,y2)
@@ -94,7 +101,11 @@ class Human(object):
         y_min = 0 + border;
         
         # whilst in bounds, drive at constant speed
-        if self.x_Pos > x_min and self.x_Pos < x_max and self.y_Pos > y_min and self.y_Pos < y_max:
+        if self.x_pos > x_min and self.x_pos < x_max and self.y_pos > y_min and self.y_pos < y_max:
             return True
         else:
             return False
+
+    def print_filtered(self, output_string):
+        if (self.output == "Verbose"):
+            print(output_string)

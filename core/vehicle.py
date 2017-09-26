@@ -1,6 +1,6 @@
 from core.protocol import *
-from agents import Human
-from vehicles import Car
+from vehicles import *
+from agents import *
 import math
 
 #An object of the vehicle class controls a specific car
@@ -13,13 +13,13 @@ class Vehicle:
 
         # The agent which controls this vehicle's actions
         if (agent == "Human"):
-            self.agent = Human()
+            self.agent = Human.Human(self.address)
         else :
             print("Invalid agent. Must be 'Human'.")
 
         # The vehicle type which defines parameters such as vehicle speed, acceleration and turning circle
         if (vehicle == "Car"):
-            self.vehicle = Car()
+            self.vehicle = Car.Car()
         else :
             print("Invalid vehicle. Must be 'Car'.")
 
@@ -62,8 +62,9 @@ class Vehicle:
 
     # Update this cars precepts
     # TODO: Add to agent
-    def updatePrecepts(self, visionObjects):
+    def updatePrecepts(self, visionObjects, map_graph):
         self.Vision_Objects = visionObjects
+        self.agent.update_precepts(self.Orientation, self.X_Pos,self.Y_Pos, self.X_Vel,self.Y_Vel, map_graph, self.Vision_Objects)
     
     def updateStateFromVisionObject(self,stateVariables):
         self.Orientation = stateVariables.Orientation
@@ -78,8 +79,7 @@ class Vehicle:
 
         displacementOrientation = (90 - 180/math.pi*math.atan2(displacementY, displacementX));
         if (displacementOrientation < 0):
-                displacementOrientation = 360 + displacementOrientation;
-				
+                displacementOrientation = 360 + displacementOrientation;	
         return displacementOrientation
 
     def calculateSpeed(self):
@@ -118,7 +118,39 @@ class Vehicle:
             else:
                 #print ('Steering STRAIGHT')
                 self.queueCommand(bytes([STEERING, 0]))
-                
+
+    def decideAction(self):
+        # Get agent to decide what to do
+        decided_actions = self.agent.decide_actions()
+
+        # Take decided actions and convert to car commands
+        for action in decided_actions:
+            action_name = action[0]
+            action_arg1 = action[1]
+            action_arg2 = action[2]
+
+            print(action_name)
+
+            if (action_name == "STOP"):
+                self.stop()
+            elif (action_name == "FORWARD"):
+                self.run()
+            elif (action_name == "REVERSE"):
+                #TODO: Implement this
+                pass
+            elif (action_name == "LEFT"):
+                #TODO: Implement this
+                pass
+            elif (action_name == "RIGHT"):
+                #TODO: Implement this
+                pass
+            elif (action_name == "TARGET"):
+                #TODO: Implement this
+                pass            
+            else:
+                # Unrecognised action, do nothing
+                pass
+        
     def checkCarAtTarget(self):        
         distanceToTarget = self.distance(self.X_Pos, self.Y_Pos,self.targets[self.currentTarget][0], self.targets[self.currentTarget][1])
         if(distanceToTarget < 50):

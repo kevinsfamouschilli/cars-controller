@@ -4,7 +4,7 @@
 bt_loop_sleep = 25
 
 # Whether or not to open CV window which shows position of cars on screen
-cvDataWindow = True
+cvDataWindow = False
 
 ''' END CONFIG '''
 
@@ -16,8 +16,8 @@ addresses = []
 # Environment graph
 map_graph = None
 
-# List of currently connected cars
-cars = []
+# List of currently connected vehicles
+vehicles = []
 
 # Whether the communication threads are running
 bt_running = True

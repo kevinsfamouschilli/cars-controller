@@ -12,10 +12,13 @@ from PyQt4 import QtCore,QtGui
 from bluetooth import *
 
 from core.ui import Ui_MainWindow, Ui_CV
+'''
 import core.load_config as load_config
 import core.common as common
-import core.car as car
+import core.Vehicle
 import core.vision_object as vision_object
+'''
+from core import *
 
 def bt_send():
     """
@@ -24,18 +27,18 @@ def bt_send():
     readSocket = False
     
     while common.bt_running:
-        for car in common.cars:
+        for vehicle in common.vehicles:
             try:
-                can_read, can_write, has_error = select.select([], [car.socket], [], 0)
-                if car.socket in can_write:
+                can_read, can_write, has_error = select.select([], [vehicle.socket], [], 0)
+                if vehicle.socket in can_write:
                     try:
-                        item = car.out_dict.popitem()
+                        item = vehicle.out_dict.popitem()
                     except KeyError:
                         # Dictionary is empty, do nothing
                         pass
                     else:
                         # Send command
-                        car.socket.send(item[0])
+                        vehicle.socket.send(item[0])
                         
                         # Calculate and print total system delay
                         millis = int(round(time.time()*1000))
@@ -45,8 +48,8 @@ def bt_send():
                 
             except (BluetoothError, OSError, ValueError) as e:
                 print(e)
-                car.socket.close()
-                common.cars.remove(car)
+                vehicle.socket.close()
+                common.vehicle.remove(vehicle)
 
         # Sleep is essential otherwise all system resources are taken and total system delay skyrockets
         time.sleep(common.bt_loop_sleep/1000);
@@ -128,30 +131,30 @@ class MainWindow(QMainWindow):
         # For loop on each k-v pair in the json
         for key, value in cv_json.items():
             if(key != "time"):
-                vis_obj = vision_object.Vision_Object(key, value)
+                vis_obj = Vision_Object.Vision_Object(key, value)
                 vision_objects.append(vis_obj)
             elif (key == "time"):
                 referenceTime = value
         
         # For each car in our list
-        for car in common.cars:
+        for vehicle in common.vehicles:
             # Check if we received CV data
-            if car.address in cv_json:
+            if vehicle.address in cv_json:
                 
                 # Set last seen time in car object
-                car.updatePreceptTime(referenceTime)
+                vehicle.updatePreceptTime(referenceTime)
                 
                 # Create vision object from json
-                vis_obj = vision_object.Vision_Object(car.address, cv_json[car.address])
+                vis_obj = Vision_Object.Vision_Object(vehicle.address, cv_json[vehicle.address])
 
                 # Update the corresponding car based on MAC
-                car.updateStateFromVisionObject(vis_obj)
+                vehicle.updateStateFromVisionObject(vis_obj)
 
                 # Update corresponding car precepts
-                car.updatePrecepts(vision_objects)
+                vehicle.updatePrecepts(vision_objects, common.map_graph)
                                         
-                # Make decision based on updated vision        
-                car.decideAction()
+                # Vehicle agent to make decision based on updated vision        
+                vehicle.decideAction()
             else:
                 print("%s is lost." % car.address)
         
@@ -166,16 +169,16 @@ def find_between_r( s, first, last ):
     except ValueError:
         return ""
 
-def connectToCars():
+def connectToVehicles():
     # Try connect to all of our cars
-    print("Connecting to cars...")
+    print("Connecting to vehicles...")
     num_connected = 0
     for address in common.addresses:
         try:
             socket = BluetoothSocket(RFCOMM)
             socket.connect((address, 1))
             print("Connected to %s" % address)
-            common.cars.append(car.Car(address, socket))
+            common.vehicles.append(Vehicle.Vehicle(address, socket, "Human", "Car"))
             num_connected += 1
         except (BluetoothError, OSError) as e:
             print("Could not connect to %s because %s" % (address, e))
@@ -186,15 +189,13 @@ def main():
     # Load config
     load_config.load_vehicles()
     load_config.load_map_data()
-
-    sys.exit(0);
     
     # Connect to cars
-    num_connected = connectToCars()
+    num_connected = connectToVehicles()
 
     # Quit if we did not find any cars
     if(num_connected == 0):
-        print("No cars connected, shutting down...")
+        print("No vehicles connected, shutting down...")
         sys.exit(0)
     
     # Start communication threads
@@ -212,8 +213,8 @@ def main():
     print('Shutting down...')
     common.bt_running = False
     t_process.join()
-    for car in common.cars:
-        car.socket.close()
+    for vehicle in common.vehicles:
+        vehicle.socket.close()
     print('Exiting...')
 
     sys.exit(result)
