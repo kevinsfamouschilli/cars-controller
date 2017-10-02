@@ -140,19 +140,25 @@ class Vehicle:
                 self.queueCommand(bytes([THROTTLE, self.acceleration & 0x7f]))
             elif (action_name == "LEFT"):
                 self.steering = self.vehicle.filter_turn(self.steering, action_arg1)
-                self.queueCommand(bytes([STEERING, 0]))
+                self.queueCommand(bytes([STEERING, self.steering & 0x7f]))
                 pass
             elif (action_name == "RIGHT"):
-                self.steering = self.vehicle.filter_turn(self.steering, action_arg1)
-                self.queueCommand(bytes([STEERING, 0]))
+                self.steering = -self.vehicle.filter_turn(self.steering, action_arg1)
+                self.queueCommand(bytes([STEERING, self.steering & 0x7f]))
             elif (action_name == "TARGET"):
-                #TODO: Implement this
-                pass            
+                #TODO: Test this
+                displacementX = action_arg1 - self.X_Pos
+                displacementY = action_arg2 - self.Y_Pos
+                displacementOrientation = (90 - 180/math.pi*math.atan2(displacementY, displacementX));
+                if (displacementOrientation < 0):
+                        displacementOrientation = 360 + displacementOrientation;
+                # TODO: Filter output steering and speed amounts
+                self.orientationControl(self, displacementOrientation)
             else:
                 # Unrecognised action, do nothing
                 pass
         
-    def checkCarAtTarget(self):        
+    def checkCarAtTarget(self):
         distanceToTarget = self.distance(self.X_Pos, self.Y_Pos,self.targets[self.currentTarget][0], self.targets[self.currentTarget][1])
         if(distanceToTarget < 50):
             self.currentTarget = (self.currentTarget + 1) % len(self.targets)
