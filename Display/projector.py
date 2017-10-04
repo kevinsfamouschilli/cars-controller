@@ -10,7 +10,8 @@ def start_projection():
 
     # Create display
     display = pygame.display.set_mode((common.display_width,common.display_height),pygame.FULLSCREEN)
-
+    #pygame.display.set_caption('CARS')
+    
     # Load background image image
     background_image = pygame.image.load('config/map_image.jpg')
 

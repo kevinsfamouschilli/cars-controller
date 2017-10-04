@@ -49,112 +49,65 @@ def bt_send():
         # Sleep is essential otherwise all system resources are taken and total system delay skyrockets
         time.sleep(common.bt_loop_sleep/1000);
 
-class ServerThread(QtCore.QThread):
-    json_received = QtCore.pyqtSignal(object)
-
-    def __init__(self):
-        QtCore.QThread.__init__(self)
-        
-    def run(self):       
-        t = ThreadedTCPServer(('localhost',1520), service)
-        t.signal = self.json_received
-        t.serve_forever()
-        
+                
 class service(socketserver.BaseRequestHandler):
-    
     def handle(self):
-        print('\nComputer vision starting...\n')
-        common.cv_running = True
         while 1:
             self.data = self.request.recv(1024)
-            if not self.data:
-                break            
-            self.data = self.data.strip()                
-            self.server.signal.emit(self.data)
 
-        commoncv_running = False
-        print('\nComputer vision stopped\n')
+            print('Handling request')
+            if not (self.data):
+                break
+
+            self.data = self.data.strip()
+
+            readJSON(self.data)
         self.request.close()
+def readJSON(data):
 
-class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    pass
+    referenceTime = 0
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        QMainWindow.__init__(self)
-
-        # Start window which visualises the CV data
-        if (common.cvDataWindow):
-            self.cvwindow = Ui_CV()
-            self.cvwindow.show()
-
-        # Start control UI
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
-
-        #Button Controls:
-        self.ui.quitPB.clicked.connect(self.quit)
-        
-        # Start the threaded socket server
-        self.start_server()
+    # Decode jsondata into k-v pairs
+    datastr = data.decode('utf-8')
+    datastr = "{" + find_between_r(datastr,"{","}") + "}"
+    #print(datastr)
+    cv_json = json.loads(datastr)
+    
+    # Precepts for the cars - at the moment this is everything visible
+    vision_objects = []
+    
+    # For loop on each k-v pair in the json
+    for key, value in cv_json.items():
+        if(key != "time"):
+            vis_obj = Vision_Object.Vision_Object(key, value)
+            vision_objects.append(vis_obj)
+        elif (key == "time"):
+            referenceTime = value
+    
+    # For each car in our list
+    for vehicle in common.vehicles:
+        # Check if we received CV data
+        if vehicle.address in cv_json:
             
-    #The command for the quit button
-    def quit(self):
-        common.bt_running = False
+            # Set last seen time in car object
+            vehicle.updatePreceptTime(referenceTime)
+            
+            # Create vision object from json
+            vis_obj = Vision_Object.Vision_Object(vehicle.address, cv_json[vehicle.address])
 
-    def start_server(self):
-        self.threads = []
-        server = ServerThread()
-        server.json_received.connect(self.readJSON)
-        self.threads.append(server)
-        server.start()
-        common.cv_running = False
-        
-    def readJSON(self,data):
+            # Update the corresponding car based on MAC
+            vehicle.updateStateFromVisionObject(vis_obj)
 
-        referenceTime = 0
-
-        # Decode jsondata into k-v pairs
-        datastr = data.decode('utf-8')
-        datastr = "{" + find_between_r(datastr,"{","}") + "}"
-        #print(datastr)
-        cv_json = json.loads(datastr)
-        
-        # Precepts for the cars - at the moment this is everything visible
-        vision_objects = []
-        
-        # For loop on each k-v pair in the json
-        for key, value in cv_json.items():
-            if(key != "time"):
-                vis_obj = Vision_Object.Vision_Object(key, value)
-                vision_objects.append(vis_obj)
-            elif (key == "time"):
-                referenceTime = value
-        
-        # For each car in our list
-        for vehicle in common.vehicles:
-            # Check if we received CV data
-            if vehicle.address in cv_json:
-                
-                # Set last seen time in car object
-                vehicle.updatePreceptTime(referenceTime)
-                
-                # Create vision object from json
-                vis_obj = Vision_Object.Vision_Object(vehicle.address, cv_json[vehicle.address])
-
-                # Update the corresponding car based on MAC
-                vehicle.updateStateFromVisionObject(vis_obj)
-
-                # Update corresponding car precepts
-                vehicle.updatePrecepts(vision_objects, common.map_graph)
-                                        
-                # Vehicle agent to make decision based on updated vision        
-                vehicle.decideAction()
-            else:
-                print("%s is lost." % car.address)
-        
-        if(common.cvDataWindow):
-            self.cvwindow.update()
+            # Update corresponding car precepts
+            vehicle.updatePrecepts(vision_objects, common.map_graph)
+                                    
+            # Vehicle agent to make decision based on updated vision        
+            vehicle.decideAction()
+        else:
+            print("%s is lost." % vehicle.address)
+    
+    if(common.cvDataWindow):
+        self.cvwindow.update()
 
 def find_between_r( s, first, last ):
     try:
@@ -180,6 +133,9 @@ def connectToVehicles():
 
     return num_connected
 
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    pass
+
 def main():
     # Load config
     load_config.load_vehicles()
@@ -189,25 +145,27 @@ def main():
     num_connected = connectToVehicles()
 
     # Start projection
+    print("Starting projection")
     projector.start_projection()
-    time.sleep(1)
-    projector.stop_projection()
-    
+
     # Quit if we did not find any vehicles
     if(num_connected == 0):
         print("No vehicles connected, shutting down...")
         sys.exit(0)
     
     # Start communication threads
+    print("Starting communication thread")
     t_process = threading.Thread(target=bt_send)
     t_process.daemon = True
     t_process.start()
         
     # Main loop
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()  
-    result = app.exec_()
+    print("Start server...")
+    t = ThreadedTCPServer(('localhost',1520), service)
+    server_thread = threading.Thread(target=t.serve_forever())
+    server_thread.daemon = True
+    server_thread.start()
+    #t.serve_forever()
 
     # Cleanup sockets
     print('Shutting down...')
@@ -216,6 +174,10 @@ def main():
     for vehicle in common.vehicles:
         vehicle.socket.close()
     print('Exiting...')
+
+    # Stop projector
+    #time.sleep(1)
+    #projector.stop_projection()
 
     sys.exit(result)
 

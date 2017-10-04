@@ -7,8 +7,8 @@ bt_loop_sleep = 25
 cvDataWindow = False
 
 # Size of projected image - set to resolution of projector
-display_width = 1920
-display_height = 1080
+display_width = 1600
+display_height = 1200
 
 ''' END CONFIG '''
 
