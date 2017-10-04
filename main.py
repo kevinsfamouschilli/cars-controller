@@ -13,6 +13,7 @@ from bluetooth import *
 
 from core.ui import Ui_MainWindow, Ui_CV
 from core import *
+from display import projector
 
 def bt_send():
     """
@@ -184,10 +185,15 @@ def main():
     load_config.load_vehicles()
     load_config.load_map_data()
     
-    # Connect to cars
+    # Connect to Zenwheels vehicles
     num_connected = connectToVehicles()
 
-    # Quit if we did not find any cars
+    # Start projection
+    projector.start_projection()
+    time.sleep(1)
+    projector.stop_projection()
+    
+    # Quit if we did not find any vehicles
     if(num_connected == 0):
         print("No vehicles connected, shutting down...")
         sys.exit(0)

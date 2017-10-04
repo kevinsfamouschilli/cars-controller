@@ -1,38 +1,39 @@
 import pygame
+from core import common
 
-pygame.init()
-
-display_width = 1600
-display_height = 1200
-
-gameDisplay = pygame.display.set_mode((display_width,display_height),pygame.FULLSCREEN)
-pygame.display.set_caption('CARS')
-
-black = (0,0,0)
-white = (255,255,255)
-
-clock = pygame.time.Clock()
-crashed = False
-carImg = pygame.image.load('../config/map_image.jpg')
-
-gameDisplay.fill(white)
-gameDisplay.blit(carImg, (0,0))
-pygame.mouse.set_visible(False)
-pygame.display.update()
-
-while not crashed:
-    try:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                crashed = True
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    crashed = True
-    except KeyboardInterrupt:
-        crashed = True
-        
-    pygame.time.wait(1000)
+def start_projection():
+    # Set display running flag to true
+    common.display_running = True
     
-pygame.quit()
+    # Initialise Pygame
+    pygame.init()
 
-quit()
+    # Create display
+    display = pygame.display.set_mode((common.display_width,common.display_height),pygame.FULLSCREEN)
+
+    # Load background image image
+    background_image = pygame.image.load('config/map_image.jpg')
+
+    # Work out scale factor using width to resize image to screen - assumes aspect ratio of background is correct
+    image_width = background_image.get_rect().size[0]
+    scale_factor = common.display_width / image_width
+
+    # Scale image to projector size - image should have same aspect ratio to avoid cropping image
+    # Rotozoom gives nicer result than using scale
+    background_image = pygame.transform.rotozoom(background_image, 0 , scale_factor)
+    
+    # Show image on display
+    display.blit(background_image, (0,0))
+
+    # Hide mouse
+    pygame.mouse.set_visible(False)
+
+    # Refresh display
+    pygame.display.update()
+
+def stop_projection():
+    # Set display running flag to false
+    common.display_running = False
+    
+    # Quit pygame
+    pygame.quit()
