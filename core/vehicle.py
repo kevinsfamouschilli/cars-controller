@@ -91,12 +91,13 @@ class Vehicle:
         
         # Can't do anything if we are too slow as the orientation value is incorrectly reported as zero
         if(self.calculateSpeed() < 25):
+            print ('### Too slow to control orientation ###')
             return
         
-        #print ('### START ORIENTATION CONTROL ###')
+        print ('### START ORIENTATION CONTROL ###')
         
         errorAngle = ((((desiredOrientation - self.Orientation) % 360) + 540) % 360) - 180;
-        #print ('Current: %d, Desired %d, errorAngle: %d' % (self.Orientation, desiredOrientation, errorAngle))
+        print ('Current: %d, Desired %d, errorAngle: %d' % (self.Orientation, desiredOrientation, errorAngle))
         sensitivity = 0.4
         requiredSteering = int(errorAngle * sensitivity)
 
@@ -112,10 +113,10 @@ class Vehicle:
             self.steering = requiredSteering
             # Send steering command
             if self.steering != 0:
-                #print ('Steering with intensity %d' % self.steering)
+                print ('Steering with intensity %d' % self.steering)
                 self.queueCommand(bytes([STEERING, self.steering & 0x7f]))
             else:
-                #print ('Steering STRAIGHT')
+                print ('Steering STRAIGHT')
                 self.queueCommand(bytes([STEERING, 0]))
 
     def decideAction(self):
@@ -153,7 +154,7 @@ class Vehicle:
                 if (displacementOrientation < 0):
                         displacementOrientation = 360 + displacementOrientation;
                 # TODO: Filter output steering and speed amounts
-                self.orientationControl(self, displacementOrientation)
+                self.orientationControl(displacementOrientation)
             else:
                 # Unrecognised action, do nothing
                 pass

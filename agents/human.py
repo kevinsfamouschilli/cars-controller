@@ -21,6 +21,9 @@ class Human(object):
         self.map_graph = None
         self.vision_objects = []
 
+        # Used to track next node to target
+        self.current_target = None
+
     '''
     Called by the vehicle class to update the agent precepts
     '''
@@ -80,10 +83,22 @@ class Human(object):
                 actions_queue.append(["STOP",0,0])
                 return actions_queue
 
+        '''
         # Not going to hit anything, so drive forward at 100%
         self.print_filtered("Not hitting anything, so drive forward.")
         actions_queue.append(["FORWARD",100,0])
-
+        '''
+        if (self.current_target is None):
+            # Haven't got a target, so pick first node in graph
+            #print("Number of nodes: " + str(self.map_graph.number_of_nodes()))
+            self.current_target = [self.map_graph.nodes(data=True)['1']['x'],self.map_graph.nodes(data=True)['1']['y']]
+        #else:
+         #   self.current_target
+            
+        self.print_filtered("Target center.")
+        actions_queue.append(["FORWARD",100,0])
+        actions_queue.append(["TARGET",self.current_target[0],self.current_target[1]])
+        
         # Return actions_queue
         return actions_queue
 
