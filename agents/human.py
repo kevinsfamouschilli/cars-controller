@@ -1,5 +1,6 @@
 from collections import deque
 import math
+import networkx as nx
 
 class Human(object):
     
@@ -83,21 +84,23 @@ class Human(object):
                 actions_queue.append(["STOP",0,0])
                 return actions_queue
 
-        '''
-        # Not going to hit anything, so drive forward at 100%
-        self.print_filtered("Not hitting anything, so drive forward.")
-        actions_queue.append(["FORWARD",100,0])
-        '''
+        print(self.current_target)
+        # Decide what position to target
         if (self.current_target is None):
-            # Haven't got a target, so pick first node in graph
-            #print("Number of nodes: " + str(self.map_graph.number_of_nodes()))
-            self.current_target = [self.map_graph.nodes(data=True)['1']['x'],self.map_graph.nodes(data=True)['1']['y']]
-        #else:
-         #   self.current_target
-            
-        self.print_filtered("Target center.")
+            # Haven't got a target, so pick first node in graph - this particular graph node index starts from 1
+            self.current_target = self.map_graph.nodes(data=True)['1']
+        else:
+            # Check if we have reached target
+            if (self.calculate_distance(self.x_pos,self.y_pos,int(self.current_target['x']),int(self.current_target['y'])) < 50):
+                # If we have, change target to next node in map graph
+                self.current_target = self.map_graph.nodes(data=True)[list(nx.neighbors(self.map_graph, self.current_target['node_id']))[0]]
+            else:
+                # Haven't reached it, so keep targetting it
+                pass
+
+        # Queue actions               
         actions_queue.append(["FORWARD",100,0])
-        actions_queue.append(["TARGET",self.current_target[0],self.current_target[1]])
+        actions_queue.append(["TARGET",int(self.current_target['x']),int(self.current_target['y'])])
         
         # Return actions_queue
         return actions_queue
@@ -112,7 +115,7 @@ class Human(object):
     Check car is within bounds
     '''
     def is_car_inbounds(self):        
-        border = 75;
+        border = 50;
         x_max = 1200 - border;
         x_min = 0 + border;
         y_max = 900 - border;

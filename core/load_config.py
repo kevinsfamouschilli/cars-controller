@@ -37,11 +37,11 @@ def load_map_data():
     for row in iterator:
         
         # Create node
-        map_graph.add_node(row[0], node_type=row[1],x=row[2], y=row[3])
+        map_graph.add_node(row[0], node_id=row[0],node_type=row[1],x=row[2], y=row[3])
 
         # Add edges (GOES_TO_1,..,GOES_TO_10)
         for col in range(4,13):
-            if (not row[col]):
+            if(row[col]):
                 map_graph.add_edge(row[0],row[col])
 
     # Save to the global variable
