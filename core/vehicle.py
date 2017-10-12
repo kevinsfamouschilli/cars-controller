@@ -101,16 +101,11 @@ class Vehicle:
         sensitivity = 0.4
         requiredSteering = int(errorAngle * sensitivity)
 
-        # Upper and lower bound the amount of steering
-        maxSteering = 50
-        if(requiredSteering > maxSteering):
-            requiredSteering = maxSteering
-        elif(requiredSteering < -maxSteering):
-            requiredSteering = -maxSteering
+        filtered_steering = self.vehicle.filter_turn(self.steering, requiredSteering)
 
         # Only send steering command if we need to change
-        if (self.steering != requiredSteering):
-            self.steering = requiredSteering
+        if (self.steering != filtered_steering):
+            self.steering = filtered_steering
             # Send steering command
             if self.steering != 0:
                 print ('Steering with intensity %d' % self.steering)
@@ -153,7 +148,6 @@ class Vehicle:
                 displacementOrientation = (90 - 180/math.pi*math.atan2(displacementY, displacementX));
                 if (displacementOrientation < 0):
                         displacementOrientation = 360 + displacementOrientation;
-                # TODO: Filter output steering and speed amounts
                 self.orientationControl(displacementOrientation)
             else:
                 # Unrecognised action, do nothing

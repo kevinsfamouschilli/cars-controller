@@ -9,8 +9,8 @@ class Car(object):
     max_acceleration = 20
     max_deceleration = 20
 
-    max_turn = 30
-    max_turn_change = 30
+    max_turn = 40
+    max_turn_change = 20
     
     '''
     Constructor
@@ -53,10 +53,23 @@ class Car(object):
     Filters the turn of the vehicle as per the limits above
     '''
     def filter_turn (self, current_turn, desired_turn):
-        output_turn = desired_turn
+        
+        if (abs(desired_turn - current_turn) > self.max_turn_change):
+            if (desired_turn < current_turn):
+                output_turn = current_turn - self.max_turn_change
+
+            if (desired_turn > current_turn):
+                output_turn = current_turn + self.max_turn_change
+        else :
+            output_turn = desired_turn
         
         # Limit turn to the max turn
         if (output_turn > self.max_turn):
             output_turn = self.max_turn
+
+        if (output_turn < -self.max_turn):
+            output_turn = -self.max_turn
+
+        #print ("Filtered turn from %d to %d",(desired_turn, output_turn))
 
         return output_turn

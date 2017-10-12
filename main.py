@@ -122,14 +122,19 @@ def connectToVehicles():
     print("Connecting to vehicles...")
     num_connected = 0
     for address in common.addresses:
-        try:
-            socket = BluetoothSocket(RFCOMM)
-            socket.connect((address, 1))
-            print("Connected to %s" % address)
-            common.vehicles.append(Vehicle.Vehicle(address, socket, "Human", "Car"))
-            num_connected += 1
-        except (BluetoothError, OSError) as e:
-            print("Could not connect to %s because %s" % (address, e))
+        # Try to connect to each car three times
+        for x in range(1,4):
+            try:
+                print("Connecting to %s (Attempt %d)" % (address, x))
+                socket = BluetoothSocket(RFCOMM)
+                socket.connect((address, 1))
+                print("Connected to %s" % address)
+                # TODO: Read "Human" and "Car" values from config file
+                common.vehicles.append(Vehicle.Vehicle(address, socket, "Human", "Car"))
+                num_connected += 1
+                break # Connected, so break out of inner for loop
+            except (BluetoothError, OSError) as e:
+                print("Could not connect to %s because %s" % (address, e))
 
     return num_connected
 

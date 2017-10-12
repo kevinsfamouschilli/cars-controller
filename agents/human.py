@@ -59,7 +59,10 @@ class Human(object):
     def decide_actions(self):
 
         # How close in mm until we stop driving to avoid collision with vision objects
-        collision_avoid_distance = 150
+        collision_avoid_distance = 100
+
+        # How close in mm until we consider ourselves at a given point
+        point_target_margin = 60
         
         # All actions the agent wishes to take are stored in this queue
         actions_queue = deque()
@@ -84,14 +87,13 @@ class Human(object):
                 actions_queue.append(["STOP",0,0])
                 return actions_queue
 
-        print(self.current_target)
         # Decide what position to target
         if (self.current_target is None):
             # Haven't got a target, so pick first node in graph - this particular graph node index starts from 1
             self.current_target = self.map_graph.nodes(data=True)['1']
         else:
             # Check if we have reached target
-            if (self.calculate_distance(self.x_pos,self.y_pos,int(self.current_target['x']),int(self.current_target['y'])) < 50):
+            if (self.calculate_distance(self.x_pos,self.y_pos,int(self.current_target['x']),int(self.current_target['y'])) < point_target_margin):
                 # If we have, change target to next node in map graph
                 self.current_target = self.map_graph.nodes(data=True)[list(nx.neighbors(self.map_graph, self.current_target['node_id']))[0]]
             else:
@@ -115,7 +117,7 @@ class Human(object):
     Check car is within bounds
     '''
     def is_car_inbounds(self):        
-        border = 50;
+        border = 25;
         x_max = 1200 - border;
         x_min = 0 + border;
         y_max = 900 - border;
