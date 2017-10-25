@@ -1,5 +1,5 @@
 MAC_Address,Bluetooth_SSID,Description,Agent_Type,Vehicle_Type,Enable (Y/N)
-00:06:66:61:A9:59,MicroCar-89,Orange Car,HUMAN,CAR,N
+00:06:66:61:9B:2D,MicroCar-45,Orange Car,HUMAN,CAR,N
 00:06:66:61:A3:48,MicroCar-72,Red Car,HUMAN,CAR,Y
 00:06:66:61:A6:CD,MicroCar-5,Blue Car,HUMAN,CAR,Y
 00:06:66:61:9F:29,MicroCar-41,Silver Car,HUMAN,CAR,N
